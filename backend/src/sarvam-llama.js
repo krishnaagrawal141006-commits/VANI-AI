@@ -120,14 +120,54 @@ function createMulawWavBuffer(mulawBytes) {
 }
 
 /**
- * Call Sarvam STT API (Saaras v3)
+ * Call Deepgram STT API (Nova-2) for ultra-low latency transcription (~150ms)
+ * Falls back to Sarvam STT if DEEPGRAM_API_KEY is not set.
  */
 async function transcribeSpeech(wavBuffer) {
+  const deepgramKey = process.env.DEEPGRAM_API_KEY;
+  
+  if (deepgramKey) {
+    // ⚡ Deepgram Nova-2 — fastest STT available (~150-200ms)
+    const startTime = Date.now();
+    const response = await fetch('https://api.deepgram.com/v1/listen?model=nova-2&language=hi&detect_language=true&smart_format=true&punctuate=true', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${deepgramKey}`,
+        'Content-Type': 'audio/wav'
+      },
+      body: wavBuffer
+    });
+
+    const elapsed = Date.now() - startTime;
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`[Deepgram STT] Failed (${elapsed}ms): ${response.statusText} - ${errText}`);
+      // Fallback to Sarvam
+      return transcribeSpeechSarvam(wavBuffer);
+    }
+
+    const data = await response.json();
+    const transcript = data?.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
+    const detectedLang = data?.results?.channels?.[0]?.detected_language || 'unknown';
+    console.log(`[Deepgram STT] ⚡ ${elapsed}ms | Lang: ${detectedLang} | "${transcript}"`);
+    return transcript;
+  }
+
+  // Fallback: Sarvam STT
+  return transcribeSpeechSarvam(wavBuffer);
+}
+
+/**
+ * Sarvam STT Fallback (Saaras v3)
+ */
+async function transcribeSpeechSarvam(wavBuffer) {
   const apiKey = process.env.SARVAM_API_KEY;
   if (!apiKey) {
     throw new Error('SARVAM_API_KEY missing in .env');
   }
 
+  const startTime = Date.now();
   const formData = new FormData();
   const audioBlob = new Blob([wavBuffer], { type: 'audio/wav' });
   formData.append('file', audioBlob, 'speech.wav');
@@ -142,14 +182,18 @@ async function transcribeSpeech(wavBuffer) {
     body: formData
   });
 
+  const elapsed = Date.now() - startTime;
+
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`Sarvam STT failed: ${response.statusText} - ${errText}`);
+    throw new Error(`Sarvam STT failed (${elapsed}ms): ${response.statusText} - ${errText}`);
   }
 
   const data = await response.json();
+  console.log(`[Sarvam STT] ${elapsed}ms | "${data.transcript}"`);
   return data.transcript || '';
 }
+
 
 /**
  * Dynamic Language Detection to support 11 Indic/Regional Languages dynamically in Sarvam TTS!
@@ -652,15 +696,15 @@ async function processCustomerSpeech(twilioWs, streamSid, audioBuffer, session) 
     // 1. Build Wav container
     const wavBuffer = createMulawWavBuffer(audioBuffer);
 
-    // 2. STT Speech to Text
-    console.log('[Sarvam STT] Processing speech buffer...');
+    // 2. STT Speech to Text (Deepgram Nova-2 primary, Sarvam fallback)
+    console.log('[STT Engine] Processing speech buffer...');
     const transcript = await transcribeSpeech(wavBuffer);
-    console.log(`[Sarvam STT] Customer said: "${transcript}"`);
+    console.log(`[STT Engine] Customer said: "${transcript}"`);
 
     // Clean and filter noise/single-char garbage transcripts (e.g. "आ", "à®†", "." etc.)
     const cleanTranscript = transcript.trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()।?]/g, "");
     if (!cleanTranscript || cleanTranscript.length <= 1 || /^[^a-zA-Z\u0900-\u097F]+$/.test(cleanTranscript)) {
-      console.log(`[Sarvam STT] Sound recognized as noise/garbage ("${transcript}"). Skipping response.`);
+      console.log(`[STT Engine] Sound recognized as noise/garbage ("${transcript}"). Skipping response.`);
       session.isProcessing = false;
       return;
     }
