@@ -160,7 +160,7 @@ async function transcribeSpeech(wavBuffer) {
   if (deepgramKey) {
     // ⚡ Deepgram Nova-2 — fastest STT available (~150-200ms)
     const startTime = Date.now();
-    const response = await fetch('https://api.deepgram.com/v1/listen?model=nova-2&language=hi&detect_language=true&smart_format=true&punctuate=true', {
+    const response = await fetch('https://api.deepgram.com/v1/listen?model=nova-2&language=hi&smart_format=true&punctuate=true', {
       method: 'POST',
       headers: {
         'Authorization': `Token ${deepgramKey}`,
