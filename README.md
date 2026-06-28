@@ -7,7 +7,6 @@ VaniAI is an advanced, ultra-low latency AI-powered Voice Receptionist designed 
 ## 🌟 Key Features
 
 * **Natural Hinglish AI Agent:** Auto-detects and transitions between Hindi, English, and Hinglish. Uses conversational verbal fillers ("Sure", "Ji", "Theek hai") for a human-like voice response.
-* **VoiceProbe Adversarial Testing:** Integrated red-teaming simulator to verify voice agent reliability against 12 built-in customer personas (e.g. angry customer, prompt injector, non-native accents). Evaluates reliability scores across 5 dimensions using LLM-powered judge diagnostics.
 * **Ambient Noise Filtration:** Prevents loop-hallucinations by ignoring short, single-character, or garbage audio transcripts (e.g. ambient static).
 * **Live Call Transcript Broadcasts:** Streams real-time call logs and transcripts directly to the frontend console using persistent WebSockets (`/dashboard-stream`).
 * **Twilio Caller ID Verification:** Directly trigger Twilio validation calls from the dashboard to verify new numbers in real-time.
@@ -65,4 +64,3 @@ ssh -o ServerAliveInterval=60 -R 80:localhost:5050 serveo.net
 2. Select **Twilio Cloud** or **Local Phone Bridge**.
 3. **Verify Number:** Use the security widget to trigger a verification call, input the code on your phone's keypad, and get verified instantly.
 4. **Make Call:** Input the target number and click **Make Live AI Call**!
-5. **Adversarial Testing:** Go to the **Adversarial Testing** tab in the sidebar, select an adversarial persona (such as Angry Customer or Prompt Injector), and click **Run Adversarial Simulation Test** to test your voice agent's reliability under pressure.
