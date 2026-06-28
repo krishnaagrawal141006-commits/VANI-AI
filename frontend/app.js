@@ -73,6 +73,7 @@ window.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     connectDashboardStream(); // Connect to real-time call transcript stream
     initVoiceProbe(); // Initialize VoiceProbe adversarial testing
+    initThemeToggle(); // Initialize Day/Night theme toggle
 });
 
 function setupEventListeners() {
@@ -1006,6 +1007,34 @@ function renderVoiceProbeRun(run) {
         }).join('');
         transcriptText.scrollTop = transcriptText.scrollHeight;
     }
+}
+
+function initThemeToggle() {
+    const themeToggleBtn = document.querySelector('.theme-toggle-btn');
+    if (!themeToggleBtn) return;
+
+    // Check saved user preference or default to dark mode
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+        themeToggleBtn.innerHTML = `<i class="fa-solid fa-sun text-amber"></i>`;
+    } else {
+        document.body.classList.remove('light-mode');
+        themeToggleBtn.innerHTML = `<i class="fa-solid fa-moon"></i>`;
+    }
+
+    themeToggleBtn.addEventListener('click', () => {
+        document.body.classList.toggle('light-mode');
+        const isLight = document.body.classList.contains('light-mode');
+        localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        
+        // Update toggle icon
+        if (isLight) {
+            themeToggleBtn.innerHTML = `<i class="fa-solid fa-sun text-amber"></i>`;
+        } else {
+            themeToggleBtn.innerHTML = `<i class="fa-solid fa-moon"></i>`;
+        }
+    });
 }
 
 

@@ -22,6 +22,100 @@
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Day/Night light mode styling overrides */
+body.light-mode {
+    --bg-color: #f1f5f9; /* Slate 100 */
+    --card-bg: rgba(255, 255, 255, 0.85); /* Premium light glass card */
+    --card-border: rgba(99, 102, 241, 0.12); /* subtle colored border */
+    --card-border-glow: rgba(99, 102, 241, 0.15);
+    
+    --text-primary: #0f172a; /* Slate 900 */
+    --text-muted: #64748b; /* Slate 500 */
+}
+
+/* Light mode adjustments for visual components */
+body.light-mode .glow-blob {
+    opacity: 0.15;
+}
+
+body.light-mode .glass-input {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: #cbd5e1; /* Slate 300 */
+    color: #0f172a;
+}
+
+body.light-mode .glass-input::placeholder {
+    color: #94a3b8;
+}
+
+body.light-mode .glass-input:focus {
+    border-color: var(--primary-color);
+    background: #ffffff;
+}
+
+body.light-mode .cms-table th {
+    color: #475569; /* Slate 600 */
+    border-bottom-color: #e2e8f0;
+}
+
+body.light-mode .cms-table td {
+    color: #0f172a;
+    border-bottom-color: #f1f5f9;
+}
+
+body.light-mode .cms-table tbody tr:hover {
+    background: rgba(99, 102, 241, 0.04);
+}
+
+body.light-mode .virtual-phone {
+    border-color: #e2e8f0;
+    box-shadow: 0 10px 40px rgba(15, 23, 42, 0.15);
+}
+
+body.light-mode .live-transcript-box {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: #e2e8f0;
+}
+
+body.light-mode .system-message {
+    color: #64748b;
+    background: #f1f5f9;
+}
+
+body.light-mode .modal-content {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+}
+
+body.light-mode .modal-header h2 {
+    color: #0f172a;
+}
+
+body.light-mode .modal-meta-row span {
+    color: #64748b;
+    background: #f1f5f9;
+}
+
+body.light-mode .transcript-header {
+    color: #475569;
+}
+
+body.light-mode .full-transcript-text {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #0f172a;
+}
+
+body.light-mode .dialogue-line.agent-line {
+    background: rgba(99, 102, 241, 0.05);
+    border-right-color: #cbd5e1;
+}
+
+body.light-mode .text-area {
+    color: #0f172a;
+}
+
 /* Base resets & animations */
 * {
     margin: 0;
