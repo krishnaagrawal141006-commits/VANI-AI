@@ -3,7 +3,7 @@ import { spawn } from 'child_process';
 export function startTunnel() {
   console.log('[Tunnel] Starting localtunnel on port 5050...');
   
-  const child = spawn('npx', ['localtunnel', '--port', '5050'], {
+  const child = spawn('npx', ['localtunnel', '--port', '5050', '--subdomain', 'vaniai-telecom'], {
     shell: true
   });
 

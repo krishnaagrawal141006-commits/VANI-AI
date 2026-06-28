@@ -8,7 +8,7 @@ const API_BASE = backendParam
     ? `${backendParam}/api` 
     : (window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1')
         ? 'http://localhost:5050/api'
-        : 'https://sour-snakes-love.loca.lt/api');
+        : 'https://vaniai-telecom.loca.lt/api');
 
 
 // Core State
@@ -600,7 +600,7 @@ function connectDashboardStream() {
     } else if (window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1')) {
         wsUrl = 'ws://localhost:5050/dashboard-stream';
     } else {
-        wsUrl = 'wss://sour-snakes-love.loca.lt/dashboard-stream';
+        wsUrl = 'wss://vaniai-telecom.loca.lt/dashboard-stream';
     }
     console.log('[Dashboard WebSocket] Connecting to:', wsUrl);
     
