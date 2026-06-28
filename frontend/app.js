@@ -115,7 +115,9 @@ function setupEventListeners() {
 // Fetch stats from local backend API
 async function fetchStats() {
     try {
-        const response = await fetch(`${API_BASE}/stats`);
+        const response = await fetch(`${API_BASE}/stats`, {
+            headers: { 'Bypass-Tunnel-Reminder': 'true' }
+        });
         if (response.ok) {
             stats = await response.json();
             updateStatsUI();
@@ -128,7 +130,9 @@ async function fetchStats() {
 // Fetch call history logs
 async function fetchLogs() {
     try {
-        const response = await fetch(`${API_BASE}/logs`);
+        const response = await fetch(`${API_BASE}/logs`, {
+            headers: { 'Bypass-Tunnel-Reminder': 'true' }
+        });
         if (response.ok) {
             logs = await response.json();
             renderLogs();
@@ -395,7 +399,10 @@ async function endCallSimulation() {
     try {
         const response = await fetch(`${API_BASE}/logs`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Bypass-Tunnel-Reminder': 'true'
+            },
             body: JSON.stringify(postPayload)
         });
         
@@ -444,7 +451,10 @@ async function triggerRealOutboundCall() {
     try {
         const response = await fetch(`${API_BASE}${apiPath}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Bypass-Tunnel-Reminder': 'true'
+            },
             body: JSON.stringify({ toPhone })
         });
         
@@ -478,7 +488,9 @@ function resetOutboundBtn() {
 // Fetch reservations from local/remote backend
 async function fetchBookings() {
     try {
-        const response = await fetch(`${API_BASE}/bookings`);
+        const response = await fetch(`${API_BASE}/bookings`, {
+            headers: { 'Bypass-Tunnel-Reminder': 'true' }
+        });
         if (response.ok) {
             bookings = await response.json();
             renderBookings();
@@ -679,7 +691,8 @@ async function triggerTwilioVerification() {
         const response = await fetch(`${API_BASE}/twilio/verify-caller-id`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Bypass-Tunnel-Reminder': 'true'
             },
             body: JSON.stringify({ phoneNumber: phone })
         });
