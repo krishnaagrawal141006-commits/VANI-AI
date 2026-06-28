@@ -14,8 +14,8 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Start programmatic tunnel
-startTunnel();
+// Start programmatic tunnel (disabled since we use permanent Nginx + SSL)
+// startTunnel();
 
 const app = express();
 const PORT = process.env.PORT || 5050;

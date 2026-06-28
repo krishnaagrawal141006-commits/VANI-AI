@@ -8,7 +8,7 @@ const API_BASE = backendParam
     ? `${backendParam}/api` 
     : (window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1')
         ? 'http://localhost:5050/api'
-        : 'https://vaniai-telecom.loca.lt/api');
+        : 'https://65-0-95-21.sslip.io/api');
 
 
 // Core State
@@ -600,7 +600,7 @@ function connectDashboardStream() {
     } else if (window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1')) {
         wsUrl = 'ws://localhost:5050/dashboard-stream';
     } else {
-        wsUrl = 'wss://vaniai-telecom.loca.lt/dashboard-stream';
+        wsUrl = 'wss://65-0-95-21.sslip.io/dashboard-stream';
     }
     console.log('[Dashboard WebSocket] Connecting to:', wsUrl);
     
