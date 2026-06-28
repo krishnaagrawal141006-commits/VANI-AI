@@ -423,9 +423,8 @@ async function triggerRealOutboundCall() {
         return;
     }
 
-    const dialModeInput = document.querySelector('input[name="dial-mode"]:checked');
-    const dialMode = dialModeInput ? dialModeInput.value : 'twilio';
-    const apiPath = dialMode === 'bridge' ? '/phone/dial' : '/twilio/outbound';
+    const dialMode = 'twilio';
+    const apiPath = '/twilio/outbound';
 
     triggerRealCallBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Dialing Phone...`;
     triggerRealCallBtn.disabled = true;
@@ -440,9 +439,7 @@ async function triggerRealOutboundCall() {
         const data = await response.json();
         
         if (response.ok && data.success) {
-            triggerRealCallBtn.innerHTML = dialMode === 'bridge' 
-                ? `<i class="fa-solid fa-phone"></i> Bridge Command Sent!` 
-                : `<i class="fa-solid fa-phone-slash"></i> Live Dial Active!`;
+            triggerRealCallBtn.innerHTML = `<i class="fa-solid fa-phone-slash"></i> Live Dial Active!`;
             triggerRealCallBtn.style.background = 'linear-gradient(135deg, var(--accent-crimson), #c084fc)';
             
             setTimeout(() => {
