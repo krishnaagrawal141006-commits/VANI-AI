@@ -33,18 +33,49 @@ const responseCache = new Map([
   ["haan", "Achha achha, bol bol! Main sun raha hoon."],
   ["thank you", "Are koi baat nahi yaar! Chill hai."],
   ["shukriya", "Are koi baat nahi yaar! Chill hai."],
+  ["thanks", "Are koi baat nahi yaar! Chill hai."],
+  ["dhanyavaad", "Are koi baat nahi yaar! Chill hai."],
   ["bye", "Chal bhai, baad me baat karte hain! Take care."],
   ["ok bye", "Theek hai bro, catch you later!"],
+  ["goodbye", "Chal bhai, baad me baat karte hain! Take care."],
+  ["theek hai", "Achha theek hai! Aur koi help chahiye toh batana."],
+  ["ok", "Achha theek hai! Aur koi help chahiye toh batana."],
   ["table book", "Haan bilkul! Kitne logo ke liye aur kis time table book karna hai?"],
   ["booking", "Haan bilkul! Kitne logo ke liye aur kis time table book karna hai?"],
+  ["reservation", "Haan bilkul! Kitne logo ke liye aur kis time table book karna hai?"],
+  ["book karna", "Haan bilkul! Kitne logo ke liye aur kis time table book karna hai?"],
   ["specials", "Sir, aaj humare paas Shahi Paneer, Garlic Naan aur Butter Chicken special hain!"],
   ["special", "Sir, aaj humare paas Shahi Paneer, Garlic Naan aur Butter Chicken special hain!"],
+  ["menu", "Sir, aaj humare paas Shahi Paneer, Garlic Naan aur Butter Chicken special hain!"],
   ["address", "Hum Connaught Place, Block A, New Delhi me located hain."],
   ["location", "Hum Connaught Place, Block A, New Delhi me located hain."],
+  ["kahan hai", "Hum Connaught Place, Block A, New Delhi me located hain."],
+  ["kidhar hai", "Hum Connaught Place, Block A, New Delhi me located hain."],
   ["timing", "Hum dopahar barah baje se raat ke gyarah baje tak open rehte hain."],
   ["open", "Hum dopahar barah baje se raat ke gyarah baje tak open rehte hain."],
-  ["veg", "Humere yahan pure veg aur non-veg dono tarah ka delicious food milta hai."]
+  ["time", "Hum dopahar barah baje se raat ke gyarah baje tak open rehte hain."],
+  ["kitne baje", "Hum dopahar barah baje se raat ke gyarah baje tak open rehte hain."],
+  ["band", "Hum raat ke gyarah baje band hote hain."],
+  ["veg", "Humere yahan pure veg aur non-veg dono tarah ka delicious food milta hai."],
+  ["vegetarian", "Humere yahan pure veg aur non-veg dono tarah ka delicious food milta hai."],
+  ["non veg", "Humere yahan pure veg aur non-veg dono tarah ka delicious food milta hai."],
+  ["price", "Sir, prices menu pe depend karti hain. Aap kitne logo ke liye aa rahe hain?"],
+  ["rate", "Sir, prices menu pe depend karti hain. Aap kitne logo ke liye aa rahe hain?"],
+  ["kitna paisa", "Sir, prices menu pe depend karti hain. Aap kitne logo ke liye aa rahe hain?"],
+  ["delivery", "Ji haan, hum delivery bhi karte hain! Zomato aur Swiggy pe available hain."],
+  ["parking", "Ji haan sir, restaurant ke saamne parking available hai."],
+  ["wifi", "Ji sir, free WiFi available hai restaurant mein."]
 ]);
+
+// ⚡ Pre-cached filler keys for instant playback while LLM processes
+const FILLER_PHRASES = [
+  "Hmm, ek second...",
+  "Achha,",
+  "Haan haan!",
+  "Achha achha!",
+  "Haan bhai!",
+  "Sahi hai yaar!"
+];
 
 // 📖 RAG Technique 3: Sentiment Detection for Voice Humanization
 function detectSentiment(text) {
@@ -691,15 +722,18 @@ async function processCustomerSpeech(twilioWs, streamSid, audioBuffer, session) 
     return;
   }
   session.isProcessing = true;
+  const pipelineStart = Date.now();
 
   try {
     // 1. Build Wav container
     const wavBuffer = createMulawWavBuffer(audioBuffer);
+    const t1 = Date.now();
 
     // 2. STT Speech to Text (Deepgram Nova-2 primary, Sarvam fallback)
     console.log('[STT Engine] Processing speech buffer...');
     const transcript = await transcribeSpeech(wavBuffer);
-    console.log(`[STT Engine] Customer said: "${transcript}"`);
+    const t2 = Date.now();
+    console.log(`[STT Engine] Customer said: "${transcript}" (STT: ${t2 - t1}ms)`);
 
     // Clean and filter noise/single-char garbage transcripts (e.g. "आ", "à®†", "." etc.)
     const cleanTranscript = transcript.trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()।?]/g, "");
@@ -723,7 +757,8 @@ async function processCustomerSpeech(twilioWs, streamSid, audioBuffer, session) 
     // 📖 RAG Technique 5 & 6: In-Memory Caching & Speculative Match (0ms LLM Latency!)
     const cachedResponse = getCachedOrSpeculativeResponse(transcript);
     if (cachedResponse) {
-      console.log(`[RAG Cache Hit] Bypassing Llama. Playing response instantly: "${cachedResponse}"`);
+      const cacheTime = Date.now() - pipelineStart;
+      console.log(`[RAG Cache Hit] Bypassing Llama. Playing response instantly: "${cachedResponse}" (Pipeline: ${cacheTime}ms)`);
       session.chatHistory.push({ role: 'assistant', content: cachedResponse });
       
       // Bump playback session to cancel any lingering queue or agent stream activity
@@ -741,8 +776,23 @@ async function processCustomerSpeech(twilioWs, streamSid, audioBuffer, session) 
       return;
     }
 
+    // ⚡ FILLER INJECTION: Play a pre-cached filler instantly while LLM processes
+    const fillerPhrase = FILLER_PHRASES[Math.floor(Math.random() * FILLER_PHRASES.length)];
+    if (ttsAudioCache.has(fillerPhrase)) {
+      console.log(`[Filler Injection] ⚡ Playing "${fillerPhrase}" instantly while LLM processes...`);
+      session.currentPlaybackSessionId++;
+      const fillerSessionId = session.currentPlaybackSessionId;
+      session.playbackQueue = [];
+      session.playbackQueue.push({ index: 0, text: fillerPhrase, buffer: null, resolved: false });
+      // Fire filler playback (non-blocking, parallel with LLM)
+      fetchTtsAndQueue(twilioWs, streamSid, fillerPhrase, session, fillerSessionId, 0);
+    }
+
     // 4. Query Llama and kick off custom streaming TTS pipeline
+    const t3 = Date.now();
     await streamLlamaAndTts(twilioWs, streamSid, session);
+    const totalPipeline = Date.now() - pipelineStart;
+    console.log(`[⏱️ Pipeline] Total response time: ${totalPipeline}ms (WAV: ${t1 - pipelineStart}ms | STT: ${t2 - t1}ms | LLM+TTS: ${Date.now() - t3}ms)`);
 
   } catch (error) {
     console.error('[Pipeline Engine Failure]', error);
@@ -879,8 +929,8 @@ Example: "Thank you for calling VaniAI. Have a wonderful day!"`
   const avgEnergy = totalEnergy / payloadBuffer.length;
 
   const THRESHOLD = 700; 
-  const SPEECH_MIN_FRAMES = 4; // 80ms of sound confirms speaking
-  const SILENCE_LIMIT = 12; // 240ms of silence ends speaking (Ultra-fast response)
+  const SPEECH_MIN_FRAMES = 3; // 60ms of sound confirms speaking (was 4/80ms)
+  const SILENCE_LIMIT = 8; // 160ms of silence ends speaking (was 12/240ms — 80ms faster!)
 
   // Sliding pre-speech history window to make sure STT gets first syllable
   if (!session.isSpeaking) {
