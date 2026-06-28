@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DineSaathi - AI Call Agent Console</title>
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Background Ambient Glow Blobs -->
+    <div class="glow-blob blob-1"></div>
+    <div class="glow-blob blob-2"></div>
+    <div class="glow-blob blob-3"></div>
+
+    <div class="app-container">
+        <!-- Glass Sidebar / Header -->
+        <header class="glass-header">
+            <div class="logo-area">
+                <i class="fa-solid fa-microphone-lines logo-icon"></i>
+                <div class="logo-text">
+                    <h1>DineSaathi</h1>
+                    <span>AI Receptionist Console</span>
+                </div>
+            </div>
+            <div class="status-panel">
+                <div class="status-indicator">
+                    <span class="pulse-dot green"></span>
+                    <span id="connection-status">Backend Connected</span>
+                </div>
+                <div class="sip-uri-badge">
+                    <i class="fa-solid fa-network-wired"></i>
+                    <span id="sip-uri-text">dinesaathi.pstn.twilio.com</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Grid -->
+        <main class="dashboard-grid">
+            
+            <!-- Column 1: Live Stats & Logs (Left) -->
+            <section class="grid-col-left">
+                <!-- Metrics Bar -->
+                <div class="metrics-row">
+                    <div class="glass-card metric-card">
+                        <div class="metric-icon blue"><i class="fa-solid fa-phone-volume"></i></div>
+                        <div class="metric-info">
+                            <span class="metric-label">Total Calls</span>
+                            <h3 id="stat-total-calls">0</h3>
+                        </div>
+                    </div>
+                    <div class="glass-card metric-card">
+                        <div class="metric-icon green"><i class="fa-solid fa-headset"></i></div>
+                        <div class="metric-info">
+                            <span class="metric-label">Active Calls</span>
+                            <h3 id="stat-active-calls" class="pulse-text green-text">0</h3>
+                        </div>
+                    </div>
+                    <div class="glass-card metric-card">
+                        <div class="metric-icon purple"><i class="fa-solid fa-clock"></i></div>
+                        <div class="metric-info">
+                            <span class="metric-label">Avg. Duration</span>
+                            <h3 id="stat-avg-duration">0s</h3>
+                        </div>
+                    </div>
+                    <div class="glass-card metric-card">
+                        <div class="metric-icon emerald"><i class="fa-solid fa-face-smile"></i></div>
+                        <div class="metric-info">
+                            <span class="metric-label">Success Rate</span>
+                            <h3 id="stat-success-rate">0%</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Call Logs Panel -->
+                <div class="glass-card panel-card logs-panel">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-history"></i> Recent Call History</h2>
+                        <button id="refresh-logs-btn" class="icon-btn" title="Refresh Logs">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                    </div>
+                    <div class="logs-container" id="logs-list">
+                        <!-- Filled dynamically by app.js -->
+                        <div class="empty-state">
+                            <i class="fa-solid fa-spinner fa-spin"></i>
+                            <p>Loading call history...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Bookings Panel -->
+                <div class="glass-card panel-card bookings-panel" style="margin-top: 24px;">
+                    <div class="panel-header" style="margin-bottom: 16px;">
+                        <h2><i class="fa-solid fa-calendar-check" style="color:var(--accent-emerald);"></i> Live Bookings & Reservations</h2>
+                        <button id="refresh-bookings-btn" class="icon-btn" title="Refresh Bookings">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                    </div>
+                    <div class="bookings-container" style="overflow-y: auto; max-height: 250px; scrollbar-width: thin;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">
+                                    <th style="padding: 10px 8px; font-family: var(--font-header);">Customer Name</th>
+                                    <th style="padding: 10px 8px; font-family: var(--font-header);">Phone</th>
+                                    <th style="padding: 10px 8px; font-family: var(--font-header);">Date & Time</th>
+                                    <th style="padding: 10px 8px; text-align: center; font-family: var(--font-header);">Guests</th>
+                                    <th style="padding: 10px 8px; text-align: center; font-family: var(--font-header);">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bookings-list" style="font-size: 0.9rem; color: var(--text-primary);">
+                                <!-- Filled dynamically by app.js -->
+                                <tr>
+                                    <td colspan="5" style="padding: 24px 8px; text-align: center; color: var(--text-muted);">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Loading reservations...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Column 2: Agent Config & Live Simulator (Right) -->
+            <section class="grid-col-right">
+                <!-- Agent Config Panel -->
+                <div class="glass-card panel-card config-panel">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-robot"></i> Configure DineSaathi Agent</h2>
+                        <span class="badge">OpenAI GPT-4o</span>
+                    </div>
+                    <div class="config-form">
+                        <div class="form-group">
+                            <label for="agent-voice"><i class="fa-solid fa-volume-high"></i> Voice Character</label>
+                            <select id="agent-voice" class="glass-input">
+                                <option value="alloy" selected>Alloy (Warm, professional, neutral)</option>
+                                <option value="echo">Echo (Crisp, clean, male)</option>
+                                <option value="shimmer">Shimmer (Clear, energetic, female)</option>
+                                <option value="coral">Coral (Friendly, warm, expressive)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="agent-prompt"><i class="fa-solid fa-feather-pointed"></i> System Prompt (Aapka custom behaviour)</label>
+                            <textarea id="agent-prompt" class="glass-input text-area" rows="6">Eres DineSaathi, un asistente de llamadas inteligente y amable para un restaurante de alta cocina india.
+Aapka naam DineSaathi hai. Aap Hindi aur English (Hinglish) me natural tarike se baat karte hain.
+Aapka kaam hai customer ke tables book karna, specials batana aur unki query solve karna.
+Be extremely polite, concise, and helpful. Keep responses under 2 sentences.</textarea>
+                        </div>
+                        <button id="save-config-btn" class="glow-btn btn-primary">
+                            <i class="fa-solid fa-floppy-disk"></i> Save Agent Configuration
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Call Simulator Panel -->
+                <div class="glass-card panel-card simulator-panel">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-circle-nodes"></i> Real-time Call Simulator</h2>
+                        <span id="simulator-badge" class="badge badge-inactive">Idle</span>
+                    </div>
+                    <div class="simulator-body">
+                        <!-- Virtual Phone Device -->
+                        <div class="virtual-phone">
+                            <div class="phone-screen">
+                                <div class="phone-network-bar">
+                                    <span>5G DineSaathi</span>
+                                    <span>12:00 PM</span>
+                                </div>
+                                <div class="phone-calling-info">
+                                    <div class="caller-avatar">
+                                        <i class="fa-solid fa-user-tie"></i>
+                                    </div>
+                                    <h4 id="sim-phone-label">Ready to Call</h4>
+                                    <span id="sim-timer-label">00:00</span>
+                                </div>
+                                
+                                <!-- Audio Waveform Anim when active -->
+                                <div class="audio-waveform-container" id="waveform">
+                                    <div class="wave-bar"></div>
+                                    <div class="wave-bar"></div>
+                                    <div class="wave-bar"></div>
+                                    <div class="wave-bar"></div>
+                                    <div class="wave-bar"></div>
+                                    <div class="wave-bar"></div>
+                                    <div class="wave-bar"></div>
+                                    <div class="wave-bar"></div>
+                                </div>
+
+                                <div class="phone-status-subtitle" id="sim-status-sub">Press start to simulate a real customer call</div>
+                            </div>
+                            <div class="phone-controls">
+                                <button id="simulate-call-btn" class="phone-btn call-start-btn">
+                                    <i class="fa-solid fa-phone"></i> Simulate Call
+                                </button>
+                                <button id="end-call-btn" class="phone-btn call-end-btn hidden">
+                                    <i class="fa-solid fa-phone-slash"></i> Hang Up
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Real-time Live Transcript Viewer -->
+                        <div class="live-transcript-box">
+                            <div class="transcript-title">
+                                <span class="pulse-dot red"></span>
+                                <strong>Live Transcription (Realtime Feed)</strong>
+                            </div>
+                            <div class="transcript-content" id="live-transcript-container">
+                                <div class="system-message">Click "Simulate Call" above to begin testing speech interaction.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Real Call Trigger Panel -->
+                <div class="glass-card panel-card real-call-panel">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-phone-flip" style="color:var(--accent-emerald);"></i> Trigger Real Outbound Call</h2>
+                        <span class="badge">Live Dialer</span>
+                    </div>
+                    <div class="config-form">
+                        <div class="form-group">
+                            <label for="real-phone-number"><i class="fa-solid fa-square-phone" style="color:var(--secondary-color);"></i> Target Phone Number (Jaise: +919999988888)</label>
+                            <input type="text" id="real-phone-number" class="glass-input" placeholder="+91 99999 88888">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label style="color: var(--text-muted); font-size: 0.85rem;"><i class="fa-solid fa-sliders" style="color:var(--accent-purple); margin-right: 6px;"></i> Select Dialing Mode</label>
+                            <div style="display: flex; gap: 20px; margin-top: 8px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-primary); font-size: 0.9rem;">
+                                    <input type="radio" name="dial-mode" value="twilio" checked style="accent-color: var(--secondary-color); width: 16px; height: 16px;">
+                                    Twilio Cloud
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-primary); font-size: 0.9rem;">
+                                    <input type="radio" name="dial-mode" value="bridge" style="accent-color: var(--accent-emerald); width: 16px; height: 16px;">
+                                    Local Phone Bridge (USB)
+                                </label>
+                            </div>
+                        </div>
+                        <button id="trigger-real-call-btn" class="glow-btn btn-primary" style="background: linear-gradient(135deg, var(--accent-emerald), var(--secondary-color)); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35); width: 100%;">
+                            <i class="fa-solid fa-phone-volume"></i> Make Live AI Call
+                        </button>
+                    </div>
+                <!-- Twilio Caller Verification Panel -->
+                <div class="glass-card panel-card verification-panel" style="margin-top: 24px;">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-shield-halved" style="color:var(--accent-purple);"></i> Verify Twilio Caller ID</h2>
+                        <span class="badge">Twilio Security</span>
+                    </div>
+                    <div class="config-form">
+                        <div class="form-group">
+                            <label for="verify-phone-number"><i class="fa-solid fa-square-phone" style="color:var(--accent-purple);"></i> Phone Number to Verify (Jaise: +919405765007)</label>
+                            <input type="text" id="verify-phone-number" class="glass-input" placeholder="+91 94057 65007">
+                        </div>
+                        <button id="trigger-verify-btn" class="glow-btn btn-primary" style="background: linear-gradient(135deg, var(--accent-purple), var(--secondary-color)); box-shadow: 0 4px 15px rgba(139, 92, 246, 0.35); width: 100%;">
+                            <i class="fa-solid fa-circle-check"></i> Trigger Verification Call
+                        </button>
+                        
+                        <!-- Validation Code Display (hidden by default) -->
+                        <div id="verify-code-box" class="hidden" style="margin-top: 16px; padding: 16px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; border: 1px dashed rgba(139, 92, 246, 0.4); text-align: center;">
+                            <span style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Your 6-Digit Twilio Verification Code:</span>
+                            <div id="verify-code-display" style="font-family: var(--font-header); font-size: 2.2rem; font-weight: 800; letter-spacing: 4px; color: var(--accent-emerald); text-shadow: 0 0 10px rgba(16, 185, 129, 0.4);">------</div>
+                            <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 8px;"><i class="fa-solid fa-phone fa-shake" style="color: var(--accent-purple); margin-right: 4px;"></i> Twilio is calling you... Answer the call and enter this code!</span>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Modal for Call Detail Playback -->
+    <div class="modal-backdrop hidden" id="log-modal">
+        <div class="glass-card modal-content">
+            <div class="modal-header">
+                <h3>Call Details & Full Transcript</h3>
+                <button id="close-modal-btn" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="call-meta-info">
+                    <span id="modal-phone"><i class="fa-solid fa-phone"></i> +91 98765 43210</span>
+                    <span id="modal-date"><i class="fa-solid fa-calendar"></i> Today at 2:00 PM</span>
+                    <span id="modal-duration"><i class="fa-solid fa-clock"></i> 2m 4s</span>
+                    <span id="modal-sentiment" class="sentiment-tag positive">Positive</span>
+                </div>
+                <hr class="divider">
+                <div class="transcript-section">
+                    <h4>Full Dialogue Conversation:</h4>
+                    <div class="full-transcript-text" id="modal-transcript-text">
+                        <!-- Filled dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
