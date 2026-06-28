@@ -106,8 +106,9 @@ function getCachedOrSpeculativeResponse(text) {
 
   // 2. Pattern Matching / Speculative Check
   for (const [pattern, cachedReply] of responseCache.entries()) {
-    if (cleanText.includes(pattern) || pattern.includes(cleanText)) {
-      console.log(`[Speculative Match] Partial pattern match found ("${pattern}" matches "${cleanText}"). Bypassing LLM.`);
+    // Only allow speculative matching if the pattern is longer than 4 characters to prevent tiny inputs matching longer patterns
+    if (pattern.length > 4 && cleanText.includes(pattern)) {
+      console.log(`[Speculative Match] Pattern match found ("${pattern}" is inside "${cleanText}"). Bypassing LLM.`);
       return cachedReply;
     }
   }
