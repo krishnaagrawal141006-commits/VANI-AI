@@ -72,6 +72,7 @@ window.addEventListener('DOMContentLoaded', () => {
     fetchBookings();
     setupEventListeners();
     connectDashboardStream(); // Connect to real-time call transcript stream
+    initVoiceProbe(); // Initialize VoiceProbe adversarial testing
 });
 
 function setupEventListeners() {
@@ -760,4 +761,251 @@ async function triggerTwilioVerification() {
         triggerVerifyBtn.disabled = false;
     }
 }
+
+// -------------------------------------------------------------
+// 🔍 VoiceProbe Adversarial Testing Controller Logic
+// -------------------------------------------------------------
+let selectedPersona = 'angry_customer';
+let vpHistory = [];
+
+function initVoiceProbe() {
+    // 1. Setup persona chip selection listeners
+    const personaChips = document.querySelectorAll('.persona-chip');
+    personaChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            personaChips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            selectedPersona = chip.getAttribute('data-persona');
+            console.log(`[VoiceProbe] Selected persona key: ${selectedPersona}`);
+        });
+    });
+
+    // 2. Setup run test button listener
+    const runTestBtn = document.getElementById('run-vp-test-btn');
+    if (runTestBtn) {
+        runTestBtn.addEventListener('click', runVoiceProbeTest);
+    }
+
+    // 3. Setup refresh history button listener
+    const refreshHistoryBtn = document.getElementById('refresh-vp-history-btn');
+    if (refreshHistoryBtn) {
+        refreshHistoryBtn.addEventListener('click', fetchVoiceProbeHistory);
+    }
+
+    // 4. Initial load of history
+    fetchVoiceProbeHistory();
+}
+
+async function fetchVoiceProbeHistory() {
+    const historyList = document.getElementById('vp-history-list');
+    if (!historyList) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/voiceprobe/history`, {
+            headers: { 'Bypass-Tunnel-Reminder': 'true' }
+        });
+        if (res.ok) {
+            vpHistory = await res.json();
+            renderVoiceProbeHistoryList();
+        }
+    } catch (error) {
+        console.error('[VoiceProbe History Error]', error);
+    }
+}
+
+function renderVoiceProbeHistoryList() {
+    const historyList = document.getElementById('vp-history-list');
+    if (!historyList) return;
+
+    if (vpHistory.length === 0) {
+        historyList.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No test runs completed yet.</td></tr>`;
+        return;
+    }
+
+    historyList.innerHTML = vpHistory.map(run => {
+        const date = new Date(run.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date(run.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' });
+        const scoreClass = run.overall_score >= 80 ? 'text-emerald' : (run.overall_score >= 50 ? 'text-amber' : 'text-crimson');
+        
+        return `
+            <tr>
+                <td>${date}</td>
+                <td><strong>${run.personaName}</strong></td>
+                <td class="text-center ${scoreClass} font-bold">${run.overall_score}/100</td>
+                <td class="text-center">
+                    <button class="icon-btn vp-view-btn" data-run-id="${run.id}" title="Load Run Details">
+                        <i class="fa-solid fa-eye text-cyan"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    // Attach click listeners to view buttons
+    const viewButtons = historyList.querySelectorAll('.vp-view-btn');
+    viewButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const runId = btn.getAttribute('data-run-id');
+            const run = vpHistory.find(r => r.id === runId);
+            if (run) {
+                renderVoiceProbeRun(run);
+            }
+        });
+    });
+
+    // Default load the first run if none has been selected yet
+    if (vpHistory.length > 0) {
+        renderVoiceProbeRun(vpHistory[0]);
+    }
+}
+
+async function runVoiceProbeTest() {
+    const runTestBtn = document.getElementById('run-vp-test-btn');
+    const targetContextInput = document.getElementById('vp-target-context');
+    const agentPromptTextarea = document.getElementById('agent-prompt');
+
+    if (!runTestBtn || !targetContextInput || !agentPromptTextarea) return;
+
+    const targetContext = targetContextInput.value.trim();
+    const agentPrompt = agentPromptTextarea.value.trim();
+
+    if (!targetContext) {
+        alert("Please enter a target context for the agent!");
+        return;
+    }
+
+    // Set loading state
+    runTestBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Simulating Conversation & Evaluating...`;
+    runTestBtn.disabled = true;
+
+    try {
+        const response = await fetch(`${API_BASE}/voiceprobe/run`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Bypass-Tunnel-Reminder': 'true'
+            },
+            body: JSON.stringify({
+                personaKey: selectedPersona,
+                agentPrompt,
+                targetContext
+            })
+        });
+
+        const data = await response.json();
+        if (response.ok && data.success) {
+            runTestBtn.innerHTML = `<i class="fa-solid fa-circle-check"></i> Test Completed!`;
+            runTestBtn.classList.add('btn-success');
+            
+            // Refresh history and load the new run
+            await fetchVoiceProbeHistory();
+            if (vpHistory.length > 0) {
+                renderVoiceProbeRun(vpHistory[0]);
+            }
+
+            setTimeout(() => {
+                runTestBtn.innerHTML = `<i class="fa-solid fa-shield-halved"></i> Run Adversarial Simulation Test`;
+                runTestBtn.disabled = false;
+                runTestBtn.classList.remove('btn-success');
+            }, 2500);
+        } else {
+            throw new Error(data.error || 'Server error occurred during simulation.');
+        }
+    } catch (error) {
+        console.error('[VoiceProbe Run Error]', error);
+        alert(`Error during VoiceProbe test: ${error.message}`);
+        runTestBtn.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Retry Test Run`;
+        runTestBtn.disabled = false;
+    }
+}
+
+function renderVoiceProbeRun(run) {
+    // 1. Update overall score display
+    const overallScoreSpan = document.getElementById('vp-overall-score');
+    const scoreCircle = document.querySelector('.vp-score-circle');
+    if (overallScoreSpan && scoreCircle) {
+        overallScoreSpan.textContent = run.overall_score;
+        
+        // Dynamic border color based on score severity
+        if (run.overall_score >= 80) {
+            scoreCircle.style.borderColor = 'var(--accent-emerald)';
+            scoreCircle.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.4)';
+        } else if (run.overall_score >= 50) {
+            scoreCircle.style.borderColor = 'var(--accent-amber)';
+            scoreCircle.style.boxShadow = '0 0 20px rgba(245, 158, 11, 0.4)';
+        } else {
+            scoreCircle.style.borderColor = 'var(--accent-crimson)';
+            scoreCircle.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.4)';
+        }
+    }
+
+    // 2. Update Run Metadata
+    const runIdSpan = document.getElementById('vp-run-id');
+    const criticalCountSpan = document.getElementById('vp-critical-count');
+    const latencyAvgSpan = document.getElementById('vp-latency-avg');
+    const severityTag = document.getElementById('vp-severity-tag');
+
+    if (runIdSpan) runIdSpan.textContent = run.id;
+    if (criticalCountSpan) criticalCountSpan.textContent = run.latency.slow_turn_count;
+    if (latencyAvgSpan) latencyAvgSpan.textContent = `${run.latency.avg_latency_ms.toLocaleString()}ms`;
+    
+    if (severityTag) {
+        const severity = run.failure_analysis?.severity || 'medium';
+        severityTag.textContent = severity;
+        severityTag.className = `sentiment-tag ${severity === 'critical' || severity === 'high' ? 'negative' : (severity === 'medium' ? 'neutral' : 'positive')}`;
+    }
+
+    // 3. Update Metrics Grid
+    const mTask = document.getElementById('vpm-task');
+    const mHallucination = document.getElementById('vpm-hallucination');
+    const mPersona = document.getElementById('vpm-persona');
+    const mQuality = document.getElementById('vpm-quality');
+    const mRecovery = document.getElementById('vpm-recovery');
+
+    if (mTask) mTask.textContent = `${run.scores.task_completion}/10`;
+    if (mHallucination) mHallucination.textContent = `${run.scores.hallucination}/10`;
+    if (mPersona) mPersona.textContent = `${run.scores.persona_handling}/10`;
+    if (mQuality) mQuality.textContent = `${run.scores.response_quality}/10`;
+    if (mRecovery) mRecovery.textContent = `${run.scores.recovery}/10`;
+
+    // 4. Update Diagnostics
+    const mostCritical = document.getElementById('vp-most-critical');
+    const weaknessesList = document.getElementById('vp-weaknesses-list');
+    const fixesList = document.getElementById('vp-fixes-list');
+
+    if (mostCritical) mostCritical.textContent = run.failure_analysis?.most_critical_failure || "No critical failures observed.";
+    
+    if (weaknessesList) {
+        weaknessesList.innerHTML = (run.weaknesses || []).map(w => `<li>${w}</li>`).join('');
+    }
+    if (fixesList) {
+        fixesList.innerHTML = (run.failure_analysis?.recommended_fixes || []).map(f => `<li>${f}</li>`).join('');
+    }
+
+    // 5. Update Transcript bubbles
+    const transcriptText = document.getElementById('vp-transcript-text');
+    const transcriptPersona = document.getElementById('vp-transcript-persona');
+
+    if (transcriptPersona) {
+        transcriptPersona.textContent = `${run.personaName} vs Agent`;
+    }
+
+    if (transcriptText) {
+        transcriptText.innerHTML = (run.dialogue || []).map(line => {
+            const isPersona = line.speaker === 'Persona';
+            const speakerColor = isPersona ? 'var(--accent-purple)' : 'var(--text-muted)';
+            const bubbleBg = isPersona ? 'rgba(139, 92, 246, 0.15)' : 'rgba(255, 255, 255, 0.05)';
+            const alignment = isPersona ? 'flex-start' : 'flex-end';
+            const borderRadius = isPersona ? '12px 12px 12px 0' : '12px 12px 0 12px';
+            const borderSide = isPersona ? 'border-left: 3px solid var(--accent-purple)' : 'border-right: 3px solid var(--text-muted); text-align: right;';
+
+            return `
+                <div class="dialogue-line" style="padding: 10px 14px; background: ${bubbleBg}; border-radius: ${borderRadius}; align-self: ${alignment}; max-width: 80%; ${borderSide}">
+                    <strong style="color: ${speakerColor};">[${line.speaker.toUpperCase()}]</strong> ${line.text}
+                </div>
+            `;
+        }).join('');
+        transcriptText.scrollTop = transcriptText.scrollHeight;
+    }
+}
+
 

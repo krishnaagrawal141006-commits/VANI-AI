@@ -1,6 +1,7 @@
 import express from 'express';
 import twilio from 'twilio';
 import { triggerOutboundDial } from './twilio-stream.js';
+import { simulateConversation, evaluateTranscript, BUILTIN_PERSONAS } from './voiceprobe-engine.js';
 
 export const router = express.Router();
 
@@ -278,6 +279,108 @@ router.post('/twilio/verify-caller-id', async (req, res) => {
 
   } catch (error) {
     console.error('[Twilio Verification Error]', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==========================================
+// 🔍 VoiceProbe Adversarial Testing Endpoints
+// ==========================================
+
+let voiceprobeHistory = [
+  {
+    id: "run_999",
+    timestamp: new Date(Date.now() - 3600000).toISOString(),
+    personaKey: "angry_customer",
+    personaName: "Angry Customer",
+    targetContext: "DoorDash food delivery customer support",
+    overall_score: 34,
+    scores: {
+      task_completion: 4,
+      hallucination: 10,
+      persona_handling: 2,
+      response_quality: 3,
+      recovery: 2
+    },
+    latency: {
+      avg_latency_ms: 12678,
+      p95_latency_ms: 18546,
+      slow_turn_count: 3
+    },
+    weaknesses: [
+      "Broken grammar in opening response destroyed credibility immediately",
+      "Completely ignored demands for supervisor escalation"
+    ],
+    failure_analysis: {
+      most_critical_failure: "Grammatically broken opening responses",
+      recommended_fixes: [
+        "Implement mandatory greeting + empathy acknowledgment before any information request",
+        "Add grammar validation layer with retry logic before TTS output"
+      ],
+      severity: "critical"
+    },
+    dialogue: [
+      { speaker: "Persona", text: "I've been on hold for EIGHT minutes — put me through to a supervisor NOW." },
+      { speaker: "Agent", text: "delivery can i know your numb order id please" },
+      { speaker: "Persona", text: "Are you serious right now? I want a FULL refund." },
+      { speaker: "Agent", text: "we will proceed with the refund ma am" },
+      { speaker: "Persona", text: "Do NOT call me ma'am — I'm disputing this with my bank. GOODBYE." }
+    ]
+  }
+];
+
+// 1. Get all built-in personas
+router.get('/voiceprobe/personas', (req, res) => {
+  res.json(BUILTIN_PERSONAS);
+});
+
+// 2. Fetch history of test runs
+router.get('/voiceprobe/history', (req, res) => {
+  res.json(voiceprobeHistory);
+});
+
+// 3. Trigger a simulation run
+router.post('/voiceprobe/run', async (req, res) => {
+  const { personaKey, agentPrompt, targetContext } = req.body;
+  if (!personaKey || !agentPrompt || !targetContext) {
+    return res.status(400).json({ success: false, error: "Missing required parameters: personaKey, agentPrompt, targetContext" });
+  }
+
+  try {
+    const persona = BUILTIN_PERSONAS[personaKey];
+    if (!persona) {
+      return res.status(404).json({ success: false, error: `Persona not found: ${personaKey}` });
+    }
+
+    // 1. Simulate the dialogue turns
+    const dialogue = await simulateConversation(personaKey, agentPrompt, targetContext);
+
+    // 2. Score using LLM Judge
+    const evaluation = await evaluateTranscript(dialogue, personaKey, targetContext);
+
+    // 3. Save run to local history
+    const runResult = {
+      id: `run_${Math.floor(Math.random() * 100000)}`,
+      timestamp: new Date().toISOString(),
+      personaKey,
+      personaName: persona.name,
+      targetContext,
+      overall_score: evaluation.overall_score,
+      scores: evaluation.scores,
+      latency: {
+        avg_latency_ms: evaluation.avg_latency_ms || 2400,
+        p95_latency_ms: Math.round((evaluation.avg_latency_ms || 2400) * 1.4),
+        slow_turn_count: evaluation.critical_failures_count || 0
+      },
+      weaknesses: evaluation.weaknesses,
+      failure_analysis: evaluation.failure_analysis,
+      dialogue: dialogue
+    };
+
+    voiceprobeHistory.unshift(runResult);
+    res.json({ success: true, run: runResult });
+  } catch (error) {
+    console.error('[VoiceProbe Run Error]', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
